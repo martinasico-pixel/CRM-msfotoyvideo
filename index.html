@@ -109,8 +109,8 @@ select.fsel:focus{border-color:#555}
 .notes-txt{font-size:11px;color:var(--muted2);line-height:1.5;font-family:'DM Mono',monospace}
 
 .r-name{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.r-sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.r-sm{font-size:12px;color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-sub{font-size:12px;color:#aaaaaa;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.r-sm{font-size:12px;color:#bbbbbb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── BADGE ── */
 .badge{display:inline-flex;align-items:center;border-radius:3px;padding:3px 8px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;border:1px solid}
@@ -128,6 +128,14 @@ select.fsel:focus{border-color:#555}
   transition:opacity .15s;
 }
 .estado-select:hover{opacity:.85}
+
+/* ── ALERTAS ── */
+#alertas{margin-bottom:20px;display:flex;flex-direction:column;gap:8px}
+.alerta{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#1a0800;border:1px solid #e06030 60;border-left:3px solid #e06030;border-radius:3px;padding:11px 16px;animation:fadeUp .2s ease}
+.alerta-txt{font-size:12px;color:#f0a060;line-height:1.4;flex:1}
+.alerta-txt strong{color:#fff;font-weight:600}
+.alerta-accion{background:none;border:1px solid #e0603060;border-radius:3px;color:#e06030;font-size:11px;padding:5px 12px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;font-weight:600;transition:background .15s}
+.alerta-accion:hover{background:#e0603020}
 
 /* ── EMPTY ── */
 #empty{text-align:center;padding:100px 20px;display:none}
@@ -282,6 +290,9 @@ select.fsel:focus{border-color:#555}
     </select>
   </div>
 
+  <!-- ALERTAS -->
+  <div id="alertas"></div>
+
   <!-- SORT BAR -->
   <div class="sort-bar">
     <span class="sort-label">Ordenar por</span>
@@ -395,7 +406,7 @@ select.fsel:focus{border-color:#555}
 const API = 'https://script.google.com/macros/s/AKfycbx0cQpb4vGJZqZ1sk74idz_x8Uon1j0F8Kr8q-e2guyd-4WPIeCH6huuSsCZSW5MV4Aug/exec';
 
 const ESTADOS = {
-  armar:      {label:'Armar presup.',      color:'#666677', bg:'#131318', bd:'#66667730', ord:0},
+  armar:      {label:'Armar presup.',      color:'#e04040', bg:'#1a0505', bd:'#e0404050', ord:0},
   enviado:    {label:'Presup. enviado',    color:'#d4941a', bg:'#1a1200', bd:'#d4941a40', ord:1},
   pendiente:  {label:'Presup. pendiente',  color:'#e05c20', bg:'#1a0e00', bd:'#e05c2040', ord:2},
   aprobado:   {label:'Aprobado ✓',         color:'#1ec87a', bg:'#041510', bd:'#1ec87a40', ord:3},
@@ -437,6 +448,32 @@ function updateStats(){
   document.getElementById('sAct').textContent=act.length;
   const m=clientes.filter(c=>['aprobado','finalizado'].includes(c.estado)&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
   document.getElementById('sMonto').textContent=m?'$'+m.toLocaleString('es-AR'):'$0';
+}
+
+function diasHabiles(desde){
+  const inicio = new Date(desde.split('T')[0]+'T12:00:00');
+  const hoy = new Date();
+  return Math.floor((hoy - inicio) / (1000*60*60*24));
+}
+
+function renderAlertas(){
+  const contenedor = document.getElementById('alertas');
+  const pendientes = clientes.filter(c => c.estado==='enviado' && c.fechaContacto);
+  const alertas = pendientes
+    .map(c=>({ c, dias: diasHabiles(c.fechaContacto) }))
+    .filter(({dias})=>dias>=7)
+    .sort((a,b)=>b.dias-a.dias);
+
+  if(!alertas.length){ contenedor.innerHTML=''; return; }
+
+  contenedor.innerHTML = alertas.map(({c,dias})=>`
+    <div class="alerta">
+      <div class="alerta-txt">
+        ⏰ <strong>${x(c.nombre)}${c.empresa?' — '+x(c.empresa):''}</strong>
+        tiene el presupuesto enviado hace <strong>${dias} días</strong> sin respuesta. ¿Aprobado, rechazado o pendiente?
+      </div>
+      <button class="alerta-accion" onclick="abrirEditar('${c.id}');event.stopPropagation()">Actualizar estado</button>
+    </div>`).join('');
 }
 
 function badge(e){
@@ -537,6 +574,7 @@ function render(){
     </div>`;
   }).join('');
   updateStats();
+  renderAlertas();
 }
 
 function abrirNuevo(){
