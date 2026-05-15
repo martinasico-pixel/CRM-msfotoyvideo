@@ -259,6 +259,7 @@ select.fsel:focus{border-color:#555}
       <option value="">Todos los estados</option>
       <option value="armar">Armar presupuesto</option>
       <option value="enviado">Presupuesto enviado</option>
+      <option value="pendiente">Presupuesto pendiente</option>
       <option value="aprobado">Presupuesto aprobado</option>
       <option value="preprod">En pre producción</option>
       <option value="finalizado">Finalizado</option>
@@ -343,6 +344,7 @@ select.fsel:focus{border-color:#555}
       <select id="fEst">
         <option value="armar">Armar presupuesto</option>
         <option value="enviado">Presupuesto enviado</option>
+        <option value="pendiente">Presupuesto pendiente</option>
         <option value="aprobado">Presupuesto aprobado</option>
         <option value="preprod">En pre producción</option>
         <option value="finalizado">Finalizado</option>
@@ -393,12 +395,13 @@ select.fsel:focus{border-color:#555}
 const API = 'https://script.google.com/macros/s/AKfycbx0cQpb4vGJZqZ1sk74idz_x8Uon1j0F8Kr8q-e2guyd-4WPIeCH6huuSsCZSW5MV4Aug/exec';
 
 const ESTADOS = {
-  armar:      {label:'Armar presup.',    color:'#666677', bg:'#131318', bd:'#66667730', ord:0},
-  enviado:    {label:'Presup. enviado',  color:'#d4941a', bg:'#1a1200', bd:'#d4941a40', ord:1},
-  aprobado:   {label:'Aprobado ✓',       color:'#1ec87a', bg:'#041510', bd:'#1ec87a40', ord:2},
-  preprod:    {label:'Pre producción',   color:'#4a84f0', bg:'#040e1e', bd:'#4a84f040', ord:3},
-  finalizado: {label:'Finalizado ✓',     color:'#9a50ef', bg:'#0d0619', bd:'#9a50ef40', ord:4},
-  rechazado:  {label:'No aprobado',      color:'#d44040', bg:'#180404', bd:'#d4404040', ord:5},
+  armar:      {label:'Armar presup.',      color:'#666677', bg:'#131318', bd:'#66667730', ord:0},
+  enviado:    {label:'Presup. enviado',    color:'#d4941a', bg:'#1a1200', bd:'#d4941a40', ord:1},
+  pendiente:  {label:'Presup. pendiente',  color:'#e05c20', bg:'#1a0e00', bd:'#e05c2040', ord:2},
+  aprobado:   {label:'Aprobado ✓',         color:'#1ec87a', bg:'#041510', bd:'#1ec87a40', ord:3},
+  preprod:    {label:'Pre producción',     color:'#4a84f0', bg:'#040e1e', bd:'#4a84f040', ord:4},
+  finalizado: {label:'Finalizado ✓',       color:'#9a50ef', bg:'#0d0619', bd:'#9a50ef40', ord:5},
+  rechazado:  {label:'No aprobado',        color:'#d44040', bg:'#180404', bd:'#d4404040', ord:6},
 };
 
 let clientes=[], pdfB64='', pdfName='', editId=null;
