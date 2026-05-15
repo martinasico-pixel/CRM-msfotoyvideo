@@ -432,7 +432,7 @@ function updateStats(){
   document.getElementById('sPres').textContent=clientes.filter(c=>c.estado==='enviado').length;
   const act=clientes.filter(c=>['aprobado','preprod','finalizado'].includes(c.estado));
   document.getElementById('sAct').textContent=act.length;
-  const m=act.filter(c=>c.monto).reduce((a,c)=>a+Number(c.monto),0);
+  const m=clientes.filter(c=>['aprobado','finalizado'].includes(c.estado)&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
   document.getElementById('sMonto').textContent=m?'$'+m.toLocaleString('es-AR'):'$0';
 }
 
