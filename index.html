@@ -96,17 +96,24 @@ select.fsel:focus{border-color:#555}
 .sort-arrow { font-size:10px;opacity:.7; }
 
 /* ── TABLE ── */
-.t-head { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 100px;gap:10px;padding:6px 16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
+.t-head { display:grid;grid-template-columns:1.6fr 1.2fr 1.4fr .8fr 1fr 1.4fr 100px;gap:10px;padding:6px 16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
 
-.row { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 100px;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer;transition:border-color .12s,background .12s;animation:fadeUp .15s ease;overflow:hidden; }
+.row { display:grid;grid-template-columns:1.6fr 1.2fr 1.4fr .8fr 1fr 1.4fr 100px;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;transition:border-color .12s,background .12s;animation:fadeUp .15s ease;overflow:hidden; }
 @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .row:hover{border-color:var(--border-h);background:var(--surface2)}
-.cell{padding:14px 0;align-self:center}
+.cell{padding:13px 0;align-self:center}
 .cell:first-child{padding-left:16px}
-.cell:last-child{padding-right:16px;text-align:center}
-.row-notes{grid-column:1/-1;border-top:1px solid var(--border);padding:8px 16px;display:flex;gap:8px;align-items:baseline}
-.notes-lbl{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);flex-shrink:0}
-.notes-txt{font-size:11px;color:var(--muted2);line-height:1.5;font-family:'DM Mono',monospace}
+.cell:last-child{padding-right:16px}
+.cell-nota{padding:10px 12px;align-self:center;overflow:hidden}
+.nota-box{background:#0a0a0a;border:1px solid #222;border-radius:3px;padding:6px 10px;font-size:11px;color:#999;font-family:'DM Mono',monospace;line-height:1.4;max-height:52px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* ── TABS RECHAZADOS ── */
+.tabs{display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.tab{padding:10px 20px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none;font-family:'DM Sans',sans-serif}
+.tab:hover{color:var(--text)}
+.tab.active{color:#fff;border-bottom-color:#fff}
+.tab-count{display:inline-flex;align-items:center;justify-content:center;background:#2a2a2a;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:6px;color:#aaa}
+.tab.active .tab-count{background:#333;color:#fff}
 
 .r-name{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .r-sub{font-size:12px;color:#aaaaaa;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
@@ -290,6 +297,12 @@ select.fsel:focus{border-color:#555}
     </select>
   </div>
 
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" id="tab-activos" onclick="setTab('activos')">Clientes activos <span class="tab-count" id="tc-activos">0</span></button>
+    <button class="tab" id="tab-rechazados" onclick="setTab('rechazados')">No aprobados <span class="tab-count" id="tc-rechazados">0</span></button>
+  </div>
+
   <!-- ALERTAS -->
   <div id="alertas"></div>
 
@@ -304,9 +317,9 @@ select.fsel:focus{border-color:#555}
   </div>
 
   <!-- TABLE -->
-  <div class="t-head">
+  <div class="t-head" id="tHead">
     <span>Cliente</span><span>Servicio</span><span>Estado</span>
-    <span>Contacto</span><span>Monto</span><span>+</span>
+    <span>Contacto</span><span>Monto</span><span>Notas</span><span>+</span>
   </div>
   <div id="lista"></div>
   <div id="empty">
@@ -417,6 +430,16 @@ const ESTADOS = {
 
 let clientes=[], pdfB64='', pdfName='', editId=null;
 let sortKey='fechaContacto', sortAsc=false;
+let tabActivo='activos';
+
+function setTab(t){
+  tabActivo=t;
+  document.getElementById('tab-activos').className='tab'+(t==='activos'?' active':'');
+  document.getElementById('tab-rechazados').className='tab'+(t==='rechazados'?' active':'');
+  // Ocultar alertas y sort en tab rechazados
+  document.getElementById('alertas').style.display=t==='activos'?'flex':'none';
+  render();
+}
 
 async function apiCall(payload){
   // Apps Script requiere GET con parámetros para evitar CORS desde GitHub Pages
@@ -447,12 +470,16 @@ function fmtFecha(s){
 }
 
 function updateStats(){
-  document.getElementById('sTotal').textContent=clientes.length;
-  document.getElementById('sPres').textContent=clientes.filter(c=>c.estado==='enviado').length;
-  const act=clientes.filter(c=>['aprobado','preprod','finalizado'].includes(c.estado));
+  const activos=clientes.filter(c=>c.estado!=='rechazado');
+  const rechazados=clientes.filter(c=>c.estado==='rechazado');
+  document.getElementById('sTotal').textContent=activos.length;
+  document.getElementById('sPres').textContent=activos.filter(c=>c.estado==='enviado').length;
+  const act=activos.filter(c=>['aprobado','preprod','finalizado'].includes(c.estado));
   document.getElementById('sAct').textContent=act.length;
   const m=clientes.filter(c=>['aprobado','finalizado'].includes(c.estado)&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
   document.getElementById('sMonto').textContent=m?'$'+m.toLocaleString('es-AR'):'$0';
+  document.getElementById('tc-activos').textContent=activos.length;
+  document.getElementById('tc-rechazados').textContent=rechazados.length;
 }
 
 function diasHabiles(desde){
@@ -553,7 +580,11 @@ function render(){
   const q=(document.getElementById('busq').value||'').toLowerCase();
   const fe=document.getElementById('fEstado').value;
   const fs=document.getElementById('fServicio').value;
+
   let list=clientes.filter(c=>{
+    // Tab filtra rechazados
+    if(tabActivo==='activos' && c.estado==='rechazado') return false;
+    if(tabActivo==='rechazados' && c.estado!=='rechazado') return false;
     const mq=!q||[c.nombre,c.empresa,c.servicio,c.email,c.notas].some(v=>(v||'').toLowerCase().includes(q));
     return mq&&(!fe||c.estado===fe)&&(!fs||c.servicio===fs);
   });
@@ -570,21 +601,22 @@ function render(){
       :`<span style="color:var(--muted)">—</span>`;
     const pdfBtn=c.pdfUrl
       ?`<a href="${c.pdfUrl}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF" style="color:#d4941a;font-size:15px;text-decoration:none">📄</a>`
-      :`<span style="color:var(--border)">—</span>`;
-    const notasRow=c.notas
-      ?`<div class="row-notes"><span class="notes-lbl">Nota —</span><span class="notes-txt">${x(c.notas)}</span></div>`:'';
+      :``;
+    const notaCell=c.notas
+      ?`<div class="cell cell-nota"><div class="nota-box">${x(c.notas)}</div></div>`
+      :`<div class="cell cell-nota"><span style="color:var(--muted);font-size:11px">—</span></div>`;
     return `<div class="row">
       <div class="cell" onclick="verDetalle('${c.id}')"><div class="r-name">${x(c.nombre)}</div>${c.empresa?`<div class="r-sub">${x(c.empresa)}</div>`:''}</div>
       <div class="cell r-sm" onclick="verDetalle('${c.id}')">${x(c.servicio||'—')}</div>
       <div class="cell">${estadoSelectHtml(c)}</div>
       <div class="cell r-sm" onclick="verDetalle('${c.id}')">${fmtFecha(c.fechaContacto)}</div>
       <div class="cell" onclick="verDetalle('${c.id}')">${mon}</div>
-      <div class="cell" style="display:flex;align-items:center;gap:10px;justify-content:center">
+      ${notaCell}
+      <div class="cell" style="display:flex;align-items:center;gap:8px;padding-right:12px">
         ${pdfBtn}
         <button onclick="event.stopPropagation();abrirEditar('${c.id}')" title="Editar" style="background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;font-size:13px;cursor:pointer;padding:4px 8px;line-height:1">✏️</button>
         <button onclick="event.stopPropagation();eliminar('${c.id}')" title="Eliminar" style="background:#1a0505;border:1px solid #d4404040;border-radius:3px;color:#d44040;font-size:13px;cursor:pointer;padding:4px 8px;line-height:1">🗑️</button>
       </div>
-      ${notasRow}
     </div>`;
   }).join('');
   updateStats();
@@ -628,12 +660,32 @@ function abrirEditar(id){
 async function guardar(){
   const nombre=document.getElementById('fNombre').value.trim();
   if(!nombre){toast('⚠️ El nombre es obligatorio');return;}
+
+  // Detectar duplicados
+  const empresa=document.getElementById('fEmpresa').value.trim();
+  const email=document.getElementById('fEmail').value.trim().toLowerCase();
+  const telefono=document.getElementById('fTel').value.trim();
+  const otros=clientes.filter(c=>String(c.id)!==String(editId||''));
+  const dups=[];
+  otros.forEach(c=>{
+    if(empresa && c.empresa && c.empresa.trim().toLowerCase()===empresa.toLowerCase())
+      dups.push(`La empresa "${c.empresa}" ya existe en el cliente "${c.nombre}"`);
+    if(telefono && c.telefono && c.telefono.trim()===telefono)
+      dups.push(`El teléfono ${telefono} ya existe en el cliente "${c.nombre}"`);
+    if(email && c.email && c.email.trim().toLowerCase()===email)
+      dups.push(`El email ${email} ya existe en el cliente "${c.nombre}"`);
+  });
+  if(dups.length>0){
+    const msg=dups.join('\n')+'\n\n¿Querés guardarlo igual?';
+    if(!confirm(msg)) return;
+  }
+
   const btn=document.getElementById('btnGuardar');
   btn.disabled=true;btn.textContent='Guardando…';
   const cliente={
     id:editId||Date.now().toString(),
     nombre,
-    empresa:      document.getElementById('fEmpresa').value.trim(),
+    empresa,
     email:        document.getElementById('fEmail').value.trim(),
     telefono:     document.getElementById('fTel').value.trim(),
     servicio:     document.getElementById('fServ').value,
@@ -650,7 +702,7 @@ async function guardar(){
     const res=await apiCall({action:'save',cliente});
     if(res.ok){
       if(res.pdfUrl){cliente.pdfUrl=res.pdfUrl;cliente.pdfNombre=res.pdfNombre;}
-      if(editId){clientes=clientes.map(c=>c.id===editId?{...c,...cliente}:c);}
+      if(editId){clientes=clientes.map(c=>String(c.id)===String(editId)?{...c,...cliente}:c);}
       else{clientes.push(cliente);}
       render();closeModal('mForm');toast('✓ Guardado en Google Drive');
     } else{toast('⚠️ Error: '+res.error);}
