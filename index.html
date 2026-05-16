@@ -96,9 +96,9 @@ select.fsel:focus{border-color:#555}
 .sort-arrow { font-size:10px;opacity:.7; }
 
 /* ── TABLE ── */
-.t-head { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 90px;gap:10px;padding:6px 16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
+.t-head { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 100px;gap:10px;padding:6px 16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
 
-.row { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 90px;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer;transition:border-color .12s,background .12s;animation:fadeUp .15s ease;overflow:hidden; }
+.row { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 100px;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer;transition:border-color .12s,background .12s;animation:fadeUp .15s ease;overflow:hidden; }
 @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .row:hover{border-color:var(--border-h);background:var(--surface2)}
 .cell{padding:14px 0;align-self:center}
@@ -419,7 +419,12 @@ let clientes=[], pdfB64='', pdfName='', editId=null;
 let sortKey='fechaContacto', sortAsc=false;
 
 async function apiCall(payload){
-  const r = await fetch(API, {method:'POST', body:JSON.stringify(payload)});
+  // Apps Script requiere GET con parámetros para evitar CORS desde GitHub Pages
+  const params = new URLSearchParams({ data: JSON.stringify(payload) });
+  const r = await fetch(API + '?' + params.toString(), {
+    method: 'GET',
+    redirect: 'follow',
+  });
   return r.json();
 }
 async function cargarTodo(){
