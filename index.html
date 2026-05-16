@@ -504,7 +504,7 @@ function estadoSelectHtml(c){
 async function cambiarEstado(e, id){
   e.stopPropagation();
   const nuevoEstado=e.target.value;
-  const c=clientes.find(cc=>cc.id===id); if(!c) return;
+  const c=clientes.find(cc=>String(cc.id)===String(id)); if(!c) return;
   c.estado=nuevoEstado;
   // Guardar fecha cuando pasa a "enviado"
   if(nuevoEstado==='enviado' && !c.fechaEnviado) c.fechaEnviado=hoy();
@@ -579,10 +579,10 @@ function render(){
       <div class="cell">${estadoSelectHtml(c)}</div>
       <div class="cell r-sm" onclick="verDetalle('${c.id}')">${fmtFecha(c.fechaContacto)}</div>
       <div class="cell" onclick="verDetalle('${c.id}')">${mon}</div>
-      <div class="cell" style="display:flex;align-items:center;gap:8px">
+      <div class="cell" style="display:flex;align-items:center;gap:10px;justify-content:center">
         ${pdfBtn}
-        <button onclick="abrirEditar('${c.id}')" title="Editar" style="background:none;border:none;color:var(--muted2);font-size:14px;cursor:pointer;padding:2px;line-height:1" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='var(--muted2)'">✏️</button>
-        <button onclick="eliminar('${c.id}')" title="Eliminar" style="background:none;border:none;color:var(--muted2);font-size:14px;cursor:pointer;padding:2px;line-height:1" onmouseenter="this.style.color='#d44040'" onmouseleave="this.style.color='var(--muted2)'">🗑️</button>
+        <button onclick="event.stopPropagation();abrirEditar('${c.id}')" title="Editar" style="background:#1a1a1a;border:1px solid #333;border-radius:3px;color:#ccc;font-size:13px;cursor:pointer;padding:4px 8px;line-height:1">✏️</button>
+        <button onclick="event.stopPropagation();eliminar('${c.id}')" title="Eliminar" style="background:#1a0505;border:1px solid #d4404040;border-radius:3px;color:#d44040;font-size:13px;cursor:pointer;padding:4px 8px;line-height:1">🗑️</button>
       </div>
       ${notasRow}
     </div>`;
@@ -606,7 +606,7 @@ function abrirNuevo(){
 
 function abrirEditar(id){
   closeModal('mDetalle');
-  const c=clientes.find(cc=>cc.id===id);if(!c)return;
+  const c=clientes.find(cc=>String(cc.id)===String(id));if(!c)return;
   editId=id;pdfB64='';pdfName=c.pdfNombre||'';
   document.getElementById('formTitle').textContent='EDITAR CLIENTE';
   document.getElementById('fId').value=c.id||'';
@@ -668,7 +668,7 @@ async function eliminar(id){
 }
 
 function verDetalle(id){
-  const c=clientes.find(cc=>cc.id===id);if(!c)return;
+  const c=clientes.find(cc=>String(cc.id)===String(id));if(!c)return;
   const filas=[
     ['Servicio',c.servicio||'—'],['Email',c.email||'—'],['Teléfono',c.telefono||'—'],
     ['Fecha contacto',fmtFecha(c.fechaContacto)],['Fecha trabajo',fmtFecha(c.fechaTrabajo)],
