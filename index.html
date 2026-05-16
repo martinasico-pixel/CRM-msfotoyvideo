@@ -96,9 +96,9 @@ select.fsel:focus{border-color:#555}
 .sort-arrow { font-size:10px;opacity:.7; }
 
 /* ── TABLE ── */
-.t-head { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 32px;gap:10px;padding:6px 16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
+.t-head { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 90px;gap:10px;padding:6px 16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
 
-.row { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 32px;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer;transition:border-color .12s,background .12s;animation:fadeUp .15s ease;overflow:hidden; }
+.row { display:grid;grid-template-columns:2fr 1.4fr 1.5fr .9fr 1.1fr 90px;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:4px;cursor:pointer;transition:border-color .12s,background .12s;animation:fadeUp .15s ease;overflow:hidden; }
 @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .row:hover{border-color:var(--border-h);background:var(--surface2)}
 .cell{padding:14px 0;align-self:center}
@@ -563,18 +563,22 @@ function render(){
     const mon=c.monto
       ?`<span style="color:#1ec87a;font-weight:600;font-family:'DM Mono',monospace;font-size:12px">${c.moneda||'ARS'} ${Number(c.monto).toLocaleString('es-AR')}</span>`
       :`<span style="color:var(--muted)">—</span>`;
-    const pdf=c.pdfUrl
-      ?`<span title="PDF adjunto" style="color:#d4941a;font-size:15px">📄</span>`
+    const pdfBtn=c.pdfUrl
+      ?`<a href="${c.pdfUrl}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF" style="color:#d4941a;font-size:15px;text-decoration:none">📄</a>`
       :`<span style="color:var(--border)">—</span>`;
     const notasRow=c.notas
       ?`<div class="row-notes"><span class="notes-lbl">Nota —</span><span class="notes-txt">${x(c.notas)}</span></div>`:'';
-    return `<div class="row" onclick="verDetalle('${c.id}')">
-      <div class="cell"><div class="r-name">${x(c.nombre)}</div>${c.empresa?`<div class="r-sub">${x(c.empresa)}</div>`:''}</div>
-      <div class="cell r-sm">${x(c.servicio||'—')}</div>
+    return `<div class="row">
+      <div class="cell" onclick="verDetalle('${c.id}')"><div class="r-name">${x(c.nombre)}</div>${c.empresa?`<div class="r-sub">${x(c.empresa)}</div>`:''}</div>
+      <div class="cell r-sm" onclick="verDetalle('${c.id}')">${x(c.servicio||'—')}</div>
       <div class="cell">${estadoSelectHtml(c)}</div>
-      <div class="cell r-sm">${fmtFecha(c.fechaContacto)}</div>
-      <div class="cell">${mon}</div>
-      <div class="cell">${pdf}</div>
+      <div class="cell r-sm" onclick="verDetalle('${c.id}')">${fmtFecha(c.fechaContacto)}</div>
+      <div class="cell" onclick="verDetalle('${c.id}')">${mon}</div>
+      <div class="cell" style="display:flex;align-items:center;gap:8px">
+        ${pdfBtn}
+        <button onclick="abrirEditar('${c.id}')" title="Editar" style="background:none;border:none;color:var(--muted2);font-size:14px;cursor:pointer;padding:2px;line-height:1" onmouseenter="this.style.color='#fff'" onmouseleave="this.style.color='var(--muted2)'">✏️</button>
+        <button onclick="eliminar('${c.id}')" title="Eliminar" style="background:none;border:none;color:var(--muted2);font-size:14px;cursor:pointer;padding:2px;line-height:1" onmouseenter="this.style.color='#d44040'" onmouseleave="this.style.color='var(--muted2)'">🗑️</button>
+      </div>
       ${notasRow}
     </div>`;
   }).join('');
