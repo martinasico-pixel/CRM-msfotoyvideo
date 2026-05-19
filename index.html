@@ -442,15 +442,23 @@ function setTab(t){
 }
 
 async function apiCall(payload){
-  // Apps Script requiere GET con parámetros para evitar CORS desde GitHub Pages
+  // Si hay PDF usamos POST (base64 es muy largo para URL)
+  // Para el resto usamos GET para evitar CORS
+  if(payload.cliente && payload.cliente.pdfBase64) {
+    const r = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {'Content-Type':'text/plain'}, // text/plain evita preflight CORS
+    });
+    return r.json();
+  }
   const params = new URLSearchParams({ data: JSON.stringify(payload) });
   const r = await fetch(API + '?' + params.toString(), {
     method: 'GET',
     redirect: 'follow',
   });
   return r.json();
-}
-async function cargarTodo(){
+}async function cargarTodo(){
   try {
     const data = await apiCall({action:'getAll'});
     clientes = Array.isArray(data) ? data : [];
