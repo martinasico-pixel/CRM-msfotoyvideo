@@ -580,7 +580,7 @@ function render(){
     const pdfBtn=c.pdfUrl&&String(c.pdfUrl).startsWith('http')?`<a href="${c.pdfUrl}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF" style="color:var(--accent);font-size:14px;text-decoration:none" class="btn-acc">📄</a>`:'';
     const notaCell=c.notas?`<div class="cell cell-nota"><div class="nota-box">${x(c.notas)}</div></div>`:`<div class="cell cell-nota"><span style="color:var(--muted);font-size:11px">—</span></div>`;
     return `<div class="row">
-      <div class="cell" onclick="verDetalle('${c.id}')"><div class="r-name">${x(c.nombre)}</div>${c.empresa?`<div class="r-sub">${x(c.empresa)}</div>`:''}</div>
+      <div class="cell" onclick="verDetalle('${c.id}')"><div class="r-name">${x(c.empresa||c.nombre)}</div><div class="r-sub">${c.empresa?x(c.nombre):''}</div></div>
       <div class="cell r-sm" onclick="verDetalle('${c.id}')">${x(c.servicio||'—')}</div>
       <div class="cell">${estadoSelectHtml(c)}</div>
       <div class="cell r-sm" onclick="verDetalle('${c.id}')">${fmtFecha(c.fechaContacto)}</div>
