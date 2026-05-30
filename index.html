@@ -439,11 +439,11 @@ function detectarDuplicado(form,editId){
   const tel=(form.telefono||'').trim().replace(/[\s\-]/g,'');
   const email=(form.email||'').trim().toLowerCase();
   otros.forEach(c=>{
-    if(emp&&c.empresa&&c.empresa.trim().toLowerCase()===emp)
+    if(emp&&c.empresa&&String(c.empresa).trim().toLowerCase()===emp)
       dups.push(`La empresa "${c.empresa}" ya está registrada en "${c.nombre}"`);
-    if(tel&&c.telefono&&c.telefono.trim().replace(/[\s\-]/g,'')===tel)
+    if(tel&&c.telefono&&String(c.telefono).trim().replace(/[\s\-]/g,'')===tel)
       dups.push(`El teléfono ya está registrado en "${c.nombre}"`);
-    if(email&&c.email&&c.email.trim().toLowerCase()===email)
+    if(email&&c.email&&String(c.email).trim().toLowerCase()===email)
       dups.push(`El email ya está registrado en "${c.nombre}"`);
   });
   return [...new Set(dups)];
