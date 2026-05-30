@@ -47,7 +47,7 @@ header{position:sticky;top:0;z-index:80;background:var(--bg);border-bottom:1px s
 main{max-width:1140px;margin:0 auto;padding:28px 28px 80px}
 
 /* STATS */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-bottom:28px;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin-bottom:28px;border:1px solid var(--border);border-radius:4px;overflow:hidden}
 .stat{background:var(--surface);padding:24px 20px 20px;position:relative}
 .stat+.stat{border-left:1px solid var(--border)}
 .stat-bar{position:absolute;top:0;left:0;right:0;height:2px}
@@ -172,7 +172,6 @@ select.fsel:focus{border-color:#555}
 
 @media(max-width:740px){
   .stats{grid-template-columns:1fr 1fr}
-  .stat+.stat{border-left:none;border-top:1px solid var(--border)}
   .stat-val{font-size:38px}
   .t-head{display:none}
   .row{grid-template-columns:1fr auto}
@@ -208,12 +207,14 @@ select.fsel:focus{border-color:#555}
   <div class="stats">
     <div class="stat"><div class="stat-bar" style="background:#444"></div><div class="stat-label">Total clientes</div><div class="stat-val" id="sTotal">—</div><div class="stat-sub">registrados</div></div>
     <div class="stat"><div class="stat-bar" style="background:var(--accent)"></div><div class="stat-label">Presup. enviados</div><div class="stat-val" style="color:var(--accent)" id="sPres">—</div><div class="stat-sub">en espera</div></div>
+    <div class="stat"><div class="stat-bar" style="background:#4a84f0"></div><div class="stat-label">Total presupuestado</div><div class="stat-val" style="color:#4a84f0;font-size:32px" id="sPresTotal">—</div><div class="stat-sub">presup. enviados</div></div>
     <div class="stat"><div class="stat-bar" style="background:var(--green)"></div><div class="stat-label">Proyectos activos</div><div class="stat-val" style="color:var(--green)" id="sAct">—</div><div class="stat-sub">aprobados o en curso</div></div>
-    <div class="stat"><div class="stat-bar" style="background:var(--purple)"></div><div class="stat-label">Facturado aprob.</div><div class="stat-val" style="color:var(--purple)" id="sMonto">—</div><div class="stat-sub">aprobado + finalizado</div></div>
+    <div class="stat"><div class="stat-bar" style="background:var(--purple)"></div><div class="stat-label">Facturado aprob.</div><div class="stat-val" style="color:#ffffff;font-size:32px" id="sMonto">—</div><div class="stat-sub">aprobado + finalizado</div></div>
   </div>
 
   <div class="tabs">
     <button class="tab active" id="tab-activos" onclick="setTab('activos')">Clientes activos <span class="tab-count" id="tc-activos">0</span></button>
+    <button class="tab" id="tab-finalizados" onclick="setTab('finalizados')">Trabajos finalizados <span class="tab-count" id="tc-finalizados">0</span></button>
     <button class="tab" id="tab-rechazados" onclick="setTab('rechazados')">No aprobados <span class="tab-count" id="tc-rechazados">0</span></button>
   </div>
 
@@ -451,22 +452,28 @@ function detectarDuplicado(form,editId){
 
 // ── STATS ─────────────────────────────────────────────────────────────────
 function updateStats(){
-  const activos=clientes.filter(c=>c.estado!=='rechazado');
+  const activos=clientes.filter(c=>c.estado!=='rechazado'&&c.estado!=='finalizado');
+  const finalizados=clientes.filter(c=>c.estado==='finalizado');
   const rechazados=clientes.filter(c=>c.estado==='rechazado');
   document.getElementById('sTotal').textContent=activos.length;
   document.getElementById('sPres').textContent=activos.filter(c=>c.estado==='enviado').length;
-  document.getElementById('sAct').textContent=activos.filter(c=>['aprobado','preprod','finalizado'].includes(c.estado)).length;
-  const m=clientes.filter(c=>['aprobado','finalizado'].includes(c.estado)&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
-  document.getElementById('sMonto').textContent=m?'$'+m.toLocaleString('es-AR'):'$0';
+  // Total presupuestado = suma de enviados
+  const mPres=clientes.filter(c=>c.estado==='enviado'&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
+  document.getElementById('sPresTotal').textContent=mPres?'$'+mPres.toLocaleString('es-AR'):'$0';
+  document.getElementById('sAct').textContent=activos.filter(c=>['aprobado','preprod'].includes(c.estado)).length;
+  const mFact=clientes.filter(c=>['aprobado','finalizado'].includes(c.estado)&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
+  document.getElementById('sMonto').textContent=mFact?'$'+mFact.toLocaleString('es-AR'):'$0';
   document.getElementById('tc-activos').textContent=activos.length;
+  document.getElementById('tc-finalizados').textContent=finalizados.length;
   document.getElementById('tc-rechazados').textContent=rechazados.length;
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────
 function setTab(t){
   tabActivo=t;
-  document.getElementById('tab-activos').className='tab'+(t==='activos'?' active':'');
-  document.getElementById('tab-rechazados').className='tab'+(t==='rechazados'?' active':'');
+  ['activos','finalizados','rechazados'].forEach(id=>{
+    document.getElementById('tab-'+id).className='tab'+(t===id?' active':'');
+  });
   document.getElementById('alertas').style.display=t==='activos'?'flex':'none';
   render();
 }
@@ -551,7 +558,8 @@ function render(){
   const fe=document.getElementById('fEstado').value;
   const fs=document.getElementById('fServicio').value;
   let list=clientes.filter(c=>{
-    if(tabActivo==='activos'&&c.estado==='rechazado')return false;
+    if(tabActivo==='activos'&&(c.estado==='rechazado'||c.estado==='finalizado'))return false;
+    if(tabActivo==='finalizados'&&c.estado!=='finalizado')return false;
     if(tabActivo==='rechazados'&&c.estado!=='rechazado')return false;
     const mq=!q||[c.nombre,c.empresa,c.servicio,c.email,c.notas].some(v=>(v||'').toLowerCase().includes(q));
     return mq&&(!fe||c.estado===fe)&&(!fs||c.servicio===fs);
@@ -563,7 +571,7 @@ function render(){
   em.style.display='none';
   el.innerHTML=list.map(c=>{
     const mon=c.monto?`<span style="color:var(--green);font-weight:600;font-family:'DM Mono',monospace;font-size:12px">${c.moneda||'ARS'} ${Number(c.monto).toLocaleString('es-AR')}</span>`:`<span style="color:var(--muted)">—</span>`;
-    const pdfBtn=c.pdfUrl?`<a href="${c.pdfUrl}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF" style="color:var(--accent);font-size:14px;text-decoration:none" class="btn-acc">📄</a>`:'';
+    const pdfBtn=c.pdfUrl&&String(c.pdfUrl).startsWith('http')?`<a href="${c.pdfUrl}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF" style="color:var(--accent);font-size:14px;text-decoration:none" class="btn-acc">📄</a>`:'';
     const notaCell=c.notas?`<div class="cell cell-nota"><div class="nota-box">${x(c.notas)}</div></div>`:`<div class="cell cell-nota"><span style="color:var(--muted);font-size:11px">—</span></div>`;
     return `<div class="row">
       <div class="cell" onclick="verDetalle('${c.id}')"><div class="r-name">${x(c.nombre)}</div>${c.empresa?`<div class="r-sub">${x(c.empresa)}</div>`:''}</div>
@@ -710,7 +718,7 @@ function verDetalle(id){
     ${badge(c.estado)}
     <div style="margin-top:14px">${filas.map(([k,v])=>`<div class="d-row"><span>${k}</span><span>${x(v)}</span></div>`).join('')}</div>
     ${c.notas?`<div class="d-notes"><div class="d-notes-lbl">Notas internas</div><div class="d-notes-txt">${x(c.notas)}</div></div>`:''}
-    ${c.pdfUrl?`<a class="pdf-link" href="${c.pdfUrl}" target="_blank">📄 Ver presupuesto — ${x(c.pdfNombre||'presupuesto.pdf')}</a>`:''}
+    ${c.pdfUrl&&String(c.pdfUrl).startsWith('http')?`<a class="pdf-link" href="${c.pdfUrl}" target="_blank">📄 Ver presupuesto — ${x(c.pdfNombre||'presupuesto.pdf')}</a>`:''}
     <div class="d-actions">
       <button class="btn-edit2" onclick="abrirEditar('${c.id}')">✏️ Editar</button>
       <button class="btn-del2" onclick="eliminar('${c.id}')">Eliminar</button>
