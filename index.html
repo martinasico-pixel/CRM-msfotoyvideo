@@ -692,11 +692,13 @@ async function guardar(){
   }
 
   const btn=document.getElementById('btnGuardar');
-  btn.disabled=true;btn.textContent='Guardando…';
-  const cliente={
-    id:editId||Date.now().toString(),
-    nombre,
-    empresa,
+  btn.disabled=true; btn.textContent='Guardando…';
+
+  const clienteId = editId || Date.now().toString();
+
+  // PASO 1: guardar datos sin PDF (vía GET, siempre funciona)
+  const clienteSinPDF={
+    id: clienteId, nombre, empresa,
     email:        document.getElementById('fEmail').value.trim(),
     telefono:     document.getElementById('fTel').value.trim(),
     servicio:     document.getElementById('fServ').value,
@@ -706,19 +708,46 @@ async function guardar(){
     monto:        document.getElementById('fMonto').value,
     moneda:       document.getElementById('fMon').value,
     notas:        document.getElementById('fNotas').value.trim(),
-    pdfBase64:    pdfB64,
+    pdfBase64:    '',
     pdfNombre:    pdfName,
   };
+
   try {
-    const res=await apiCall({action:'save',cliente});
-    if(res.ok){
-      if(res.pdfUrl){cliente.pdfUrl=res.pdfUrl;cliente.pdfNombre=res.pdfNombre;}
-      if(editId){clientes=clientes.map(c=>String(c.id)===String(editId)?{...c,...cliente}:c);}
-      else{clientes.push(cliente);}
-      render();closeModal('mForm');toast('✓ Guardado en Google Drive');
-    } else{toast('⚠️ Error: '+res.error);}
-  } catch(e){toast('⚠️ Sin conexión');}
-  btn.disabled=false;btn.textContent='Guardar';
+    const res1 = await apiCall({action:'save', cliente:clienteSinPDF});
+    if(!res1.ok){ toast('⚠️ Error al guardar: '+(res1.error||''));  btn.disabled=false; btn.textContent='Guardar'; return; }
+
+    // Actualizar lista local con datos básicos
+    const clienteLocal = {...clienteSinPDF};
+    if(editId){ clientes=clientes.map(c=>String(c.id)===String(editId)?{...c,...clienteLocal}:c); }
+    else { clientes.push(clienteLocal); }
+
+    // PASO 2: si hay PDF nuevo, subirlo por separado
+    if(pdfB64){
+      btn.textContent='Subiendo PDF…';
+      try {
+        const clienteConPDF = {...clienteSinPDF, pdfBase64: pdfB64, pdfNombre: pdfName};
+        const res2 = await apiCall({action:'save', cliente:clienteConPDF});
+        if(res2.ok && res2.pdfUrl){
+          // Actualizar con URL del PDF
+          clientes = clientes.map(c=>String(c.id)===String(clienteId)
+            ? {...c, pdfUrl:res2.pdfUrl, pdfNombre:res2.pdfNombre} : c);
+          toast('✓ Guardado con PDF en Google Drive');
+        } else {
+          toast('✓ Cliente guardado — PDF no se pudo subir, intentá de nuevo desde editar');
+        }
+      } catch(e2){
+        toast('✓ Cliente guardado — PDF no se pudo subir, intentá de nuevo desde editar');
+      }
+    } else {
+      toast('✓ Guardado en Google Drive');
+    }
+
+    render(); closeModal('mForm');
+  } catch(e){
+    toast('⚠️ Sin conexión con Google Drive');
+  }
+
+  btn.disabled=false; btn.textContent='Guardar';
 }
 
 async function eliminar(id){
