@@ -215,6 +215,7 @@ select.fsel:focus{border-color:#555}
   <div class="tabs">
     <button class="tab active" id="tab-activos" onclick="setTab('activos')">Clientes activos <span class="tab-count" id="tc-activos">0</span></button>
     <button class="tab" id="tab-finalizados" onclick="setTab('finalizados')">Trabajos finalizados <span class="tab-count" id="tc-finalizados">0</span></button>
+    <button class="tab" id="tab-sinrespuesta" onclick="setTab('sinrespuesta')">Sin respuesta <span class="tab-count" id="tc-sinrespuesta">0</span></button>
     <button class="tab" id="tab-rechazados" onclick="setTab('rechazados')">No aprobados <span class="tab-count" id="tc-rechazados">0</span></button>
   </div>
 
@@ -452,26 +453,28 @@ function detectarDuplicado(form,editId){
 
 // ── STATS ─────────────────────────────────────────────────────────────────
 function updateStats(){
-  const activos=clientes.filter(c=>c.estado!=='rechazado'&&c.estado!=='finalizado');
+  const sinResp=clientes.filter(c=>c.estado==='enviado'&&diasDesde(c.fechaEnviado||c.fechaContacto)>=30);
+  const sinRespIds=new Set(sinResp.map(c=>String(c.id)));
+  const activos=clientes.filter(c=>c.estado!=='rechazado'&&c.estado!=='finalizado'&&!sinRespIds.has(String(c.id)));
   const finalizados=clientes.filter(c=>c.estado==='finalizado');
   const rechazados=clientes.filter(c=>c.estado==='rechazado');
   document.getElementById('sTotal').textContent=activos.length;
   document.getElementById('sPres').textContent=activos.filter(c=>c.estado==='enviado').length;
-  // Total presupuestado = suma de enviados
-  const mPres=clientes.filter(c=>c.estado==='enviado'&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
+  const mPres=activos.filter(c=>c.estado==='enviado'&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
   document.getElementById('sPresTotal').textContent=mPres?'$'+mPres.toLocaleString('es-AR'):'$0';
   document.getElementById('sAct').textContent=activos.filter(c=>['aprobado','preprod'].includes(c.estado)).length;
   const mFact=clientes.filter(c=>['aprobado','finalizado'].includes(c.estado)&&c.monto).reduce((a,c)=>a+Number(c.monto),0);
   document.getElementById('sMonto').textContent=mFact?'$'+mFact.toLocaleString('es-AR'):'$0';
   document.getElementById('tc-activos').textContent=activos.length;
   document.getElementById('tc-finalizados').textContent=finalizados.length;
+  document.getElementById('tc-sinrespuesta').textContent=sinResp.length;
   document.getElementById('tc-rechazados').textContent=rechazados.length;
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────
 function setTab(t){
   tabActivo=t;
-  ['activos','finalizados','rechazados'].forEach(id=>{
+  ['activos','finalizados','sinrespuesta','rechazados'].forEach(id=>{
     document.getElementById('tab-'+id).className='tab'+(t===id?' active':'');
   });
   document.getElementById('alertas').style.display=t==='activos'?'flex':'none';
@@ -542,7 +545,7 @@ function renderAlertas(){
   const alertas=clientes
     .filter(c=>c.estado==='enviado')
     .map(c=>({c,dias:diasDesde(c.fechaEnviado||c.fechaContacto)}))
-    .filter(({dias})=>dias>=7)
+    .filter(({dias})=>dias>=7&&dias<30)
     .sort((a,b)=>b.dias-a.dias);
   if(!alertas.length){el.innerHTML='';return;}
   el.innerHTML=alertas.map(({c,dias})=>`
@@ -557,9 +560,12 @@ function render(){
   const q=(document.getElementById('busq').value||'').toLowerCase();
   const fe=document.getElementById('fEstado').value;
   const fs=document.getElementById('fServicio').value;
+  const sinRespIds=new Set(clientes.filter(c=>c.estado==='enviado'&&diasDesde(c.fechaEnviado||c.fechaContacto)>=30).map(c=>String(c.id)));
   let list=clientes.filter(c=>{
-    if(tabActivo==='activos'&&(c.estado==='rechazado'||c.estado==='finalizado'))return false;
+    const esSinResp=sinRespIds.has(String(c.id));
+    if(tabActivo==='activos'&&(c.estado==='rechazado'||c.estado==='finalizado'||esSinResp))return false;
     if(tabActivo==='finalizados'&&c.estado!=='finalizado')return false;
+    if(tabActivo==='sinrespuesta'&&!esSinResp)return false;
     if(tabActivo==='rechazados'&&c.estado!=='rechazado')return false;
     const mq=!q||[c.nombre,c.empresa,c.servicio,c.email,c.notas].some(v=>(v||'').toLowerCase().includes(q));
     return mq&&(!fe||c.estado===fe)&&(!fs||c.servicio===fs);
@@ -669,20 +675,22 @@ async function guardar(){
       btn.textContent='Subiendo PDF…';
       try{
         const r2=await apiCall({action:'save',cliente:{...base,pdfBase64:pdfB64,pdfNombre:pdfName}});
-        if(r2.ok&&r2.pdfUrl){
+        if(r2.ok&&r2.pdfUrl&&String(r2.pdfUrl).startsWith('http')){
           clientes=clientes.map(c=>String(c.id)===String(clienteId)?{...c,pdfUrl:r2.pdfUrl,pdfNombre:r2.pdfNombre}:c);
           toast('✓ Guardado con PDF','ok');
         }else{
-          toast('✓ Cliente guardado — editalo para reintentar subir el PDF','ok',4000);
+          toast('✓ Cliente guardado — editalo para reintentar el PDF','ok',4000);
         }
       }catch(e2){
-        toast('✓ Cliente guardado — editalo para reintentar subir el PDF','ok',4000);
+        toast('✓ Cliente guardado — editalo para reintentar el PDF','ok',4000);
       }
     }else{
       toast('✓ Guardado en Google Drive','ok');
     }
 
     render();closeModal('mForm');
+    // Recargar desde Drive para asegurar que pdfUrl quedó bien
+    setTimeout(async()=>{ await cargarTodo(); render(); }, 1500);
   }catch(e){
     toast('⚠️ Sin conexión con Google Drive. Verificá tu internet e intentá de nuevo.','err',5000);
   }
